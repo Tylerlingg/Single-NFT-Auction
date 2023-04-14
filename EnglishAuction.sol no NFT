@@ -1,0 +1,86 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract EnglishAuction {
+    // Variables
+    address public immutable owner;
+    address payable public immutable creator;
+    uint256 public immutable royaltyPercentage;
+    uint256 public immutable start;
+    uint256 public immutable end;
+    uint256 public currentHighestBid;
+    address public currentHighestBidder;
+    mapping(address => uint256) public bids;
+    bool public ended;
+
+    // Events
+    event NewHighestBid(address indexed bidder, uint256 amount);
+    event BidOutbid(address indexed outbidBidder, uint256 newHighestBid);
+    event AuctionEnded(address indexed winner, uint256 amount);
+
+    // Constructor
+    constructor(
+        uint256 _royaltyPercentage,
+        uint256 _start,
+        uint256 _end
+    ) {
+        require(_start > block.timestamp, "Start time must be in the future.");
+        require(_end > _start, "End time must be after start time.");
+
+        owner = msg.sender;
+        creator = payable(msg.sender);
+        royaltyPercentage = _royaltyPercentage;
+        start = _start;
+        end = _end;
+    }
+
+    // Place bid function
+    function placeBid() external payable {
+        require(!ended, "Auction has ended.");
+        require(msg.sender != currentHighestBidder, "You are already the highest bidder.");
+
+        if (currentHighestBid == 0) {
+            require(msg.value > 0, "Bid must be greater than 0.");
+        } else {
+            require(msg.value >= currentHighestBid * 110 / 100, "Bid amount must be at least 10% higher than the current highest bid.");
+        }
+
+        if (currentHighestBidder != address(0)) {
+            emit BidOutbid(currentHighestBidder, msg.value);
+        }
+
+        currentHighestBid = msg.value;
+        currentHighestBidder = msg.sender;
+
+        emit NewHighestBid(msg.sender, msg.value);
+    }
+
+    // End auction function
+    function endAuction() external {
+        require(!ended, "Auction has already ended.");
+        require(msg.sender == owner, "Only the auction owner can end the auction.");
+        require(block.timestamp >= end, "Auction has not ended yet.");
+
+        ended = true;
+        creator.transfer(currentHighestBid * royaltyPercentage / 100);
+        payable(owner).transfer(currentHighestBid - (currentHighestBid * royaltyPercentage / 100));
+
+        emit AuctionEnded(currentHighestBidder, currentHighestBid);
+    }
+
+    // Withdraw function
+    function withdraw() external {
+        require(ended, "Auction has not ended yet.");
+        require(msg.sender != currentHighestBidder, "Highest bidder cannot withdraw their bid.");
+        require(bids[msg.sender] > 0, "No bids to withdraw.");
+
+        uint256 amount = bids[msg.sender];
+        bids[msg.sender] = 0;
+        payable(msg.sender).transfer(amount);
+    }
+
+    // Fallback function
+    fallback() external payable {
+        revert("This contract does not accept payments without a function call.");
+    }
+}
