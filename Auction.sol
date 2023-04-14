@@ -3,86 +3,88 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-contract Auction {
-    address internal auction_owner;
-    uint256 public auction_start;
-    uint256 public auction_end;
+contract NFTAuction {
+    address payable public auctionOwner;
+    uint256 public auctionEndTime;
     uint256 public highestBid;
-    address public highestBidder;
-    uint256 private _tokenId;
-    address private _creatorsAddress;
-    IERC721 private _token;
-
-    enum AuctionState {CANCELLED, STARTED}
-
+    address payable public highestBidder;
+    IERC721 public nftToken;
+    uint256 public tokenId;
+    address payable public creator = payable(0x4C7BEdfA26C744e6bd61CBdF86F3fc4a76DCa073);
+    uint256 public constant creatorFeePercentage = 10;
+    uint256 public constant minimumStartingBid = 1 ether;
+    
+    enum AuctionState {
+        CANCELLED,
+        STARTED
+    }
+    
     AuctionState public state;
 
-    modifier an_ongoing_auction() {
-        require(block.timestamp <= auction_end, "Auction has ended");
-        require(state == AuctionState.STARTED, "Auction is not active");
+    modifier anOngoingAuction() {
+        require(block.timestamp <= auctionEndTime, "Auction has already ended.");
+        require(state == AuctionState.STARTED, "Auction is not ongoing.");
         _;
     }
 
-    modifier only_owner() {
-        require(msg.sender == auction_owner, "Only the owner can call this function");
+    modifier onlyOwner() {
+        require(msg.sender == auctionOwner, "Only the auction owner can call this function.");
         _;
     }
 
-    constructor(
-        uint256 tokenId,
-        address tokenAddress,
-        uint256 endTime,
-        address creatorsAddress
-    ) {
-        require(endTime > block.timestamp, "Auction end time should be in the future");
+    constructor() {
+        auctionOwner = payable(0x166963d11ce7Fd4b56b35fE197638D19862fEf92);
+        state = AuctionState.CANCELLED;
+    }
 
-        auction_owner = msg.sender;
-        _tokenId = tokenId;
-        _token = IERC721(tokenAddress);
-        auction_start = block.timestamp;
-        auction_end = endTime;
-        _creatorsAddress = creatorsAddress;
-
-        // Transfer NFT from owner to contract
-        _token.transferFrom(auction_owner, address(this), _tokenId);
-
+    function startAuction(uint256 _endTime, address _nftAddress, uint256 _tokenId) external onlyOwner {
+        require(state == AuctionState.CANCELLED, "Please finish the ongoing auction first.");
+        require(_endTime > block.timestamp, "Auction end time should be in the future.");
+        
+        auctionEndTime = _endTime;
+        nftToken = IERC721(_nftAddress);
+        tokenId = _tokenId;
         state = AuctionState.STARTED;
+        nftToken.transferFrom(auctionOwner, address(this), tokenId);
     }
 
-    function bid() public payable an_ongoing_auction returns (bool) {
-        require(msg.value > highestBid, "Bid amount should be higher than the current highest bid");
-        require(msg.sender != auction_owner, "Owner can't bid");
-
+    function bid() public payable anOngoingAuction {
+        require(msg.value >= minimumStartingBid, "Bid amount must be at least 1 ether.");
+        require(msg.value > highestBid, "Bid amount must be higher than the current highest bid.");
+        
         // Refund the previous highest bidder
         if (highestBidder != address(0)) {
-            payable(highestBidder).transfer(highestBid);
+            highestBidder.transfer(highestBid);
         }
-
+        
         highestBid = msg.value;
-        highestBidder = msg.sender;
-
-        return true;
+        highestBidder = payable(msg.sender);
     }
 
-    function end_auction() public only_owner an_ongoing_auction returns (bool) {
-        require(highestBidder != address(0), "No bids placed");
-
+    function withdraw() public onlyOwner {
+        require(block.timestamp > auctionEndTime, "Auction is still ongoing.");
+        require(state != AuctionState.CANCELLED, "Auction has been cancelled.");
+        
+        uint256 creatorFee = (highestBid * creatorFeePercentage) / 100;
+        uint256 auctionOwnerProceeds = highestBid - creatorFee;
+        
+        creator.transfer(creatorFee);
+        auctionOwner.transfer(auctionOwnerProceeds);
+        
+        nftToken.transferFrom(address(this), highestBidder, tokenId);
+        
         state = AuctionState.CANCELLED;
-        auction_end = block.timestamp;
+        highestBid = 0;
+        highestBidder = payable(address(0));
+    }
 
-        uint256 creatorsCut = (highestBid * 10) / 100;
-        uint256 auctionOwnersCut = highestBid - creatorsCut;
-
-        // Send 10% to the creator's address
-        payable(_creatorsAddress).transfer(creatorsCut);
-
-        // Send the remaining amount to the auction owner
-        payable(auction_owner).transfer(auctionOwnersCut);
-
-        // Transfer NFT to the highest bidder
-        _token.transferFrom(address(this), highestBidder, _tokenId);
-
-        return true;
+    function cancelAuction() external onlyOwner {
+        require(state != AuctionState.CANCELLED, "Auction has already been cancelled.");
+        nftToken.transferFrom(address(this), auctionOwner, tokenId);
+        state = AuctionState.CANCELLED;
+        highestBid = 0;
+        highestBidder = payable(address(0));
     }
 }
+
 
