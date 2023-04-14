@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            text-align: center;
+        }
+        img {
+            max-width: 100%;
+        }
+        input[type="number"] {
+            width: 200px;
+            height: 40px;
+            text-align: center;
+            font-size: 16px;
+        }
+        button {
+            height: 40px;
+            background-color: red;
+            color: white;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Current highest bid: <span id="highestBid">0</span> ETH</h1>
+         // Replaced MFT IMAGE URL with URL of NFT in Auction
+        <img src="https://avastars.io/media/26487" alt="NFT">
+        <p>Enter your bid (in ETH):</p>
+        <input type="number" min="0" step="0.001" id="bidAmount" />
+        <button id="submitBid">Bid</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.6.1/web3.min.js"></script>
+    <script>
+        // Replace the following values with your own
+        const CONTRACT_ADDRESS = 'YOUR_CONTRACT_ADDRESS';
+        const ABI = [YOUR_CONTRACT_ABI];
+
+        // Your code to interact with the smart contract goes here
+    </script>
+</body>
+</html>
