@@ -1,86 +1,108 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "node_modules/@openzeppelin/contracts/token/ERC721/IERC721.sol";
+
 contract EnglishAuction {
-    // Variables
-    address public immutable owner;
+    address payable public immutable owner;
     address payable public immutable creator;
     uint256 public immutable royaltyPercentage;
     uint256 public immutable start;
     uint256 public immutable end;
     uint256 public currentHighestBid;
     address public currentHighestBidder;
-    mapping(address => uint256) public bids;
     bool public ended;
+    IERC721 public nft;
+    uint256 public tokenId; // Add tokenId variable
+    bool private _hasFinalized;
 
-    // Events
     event NewHighestBid(address indexed bidder, uint256 amount);
     event BidOutbid(address indexed outbidBidder, uint256 newHighestBid);
     event AuctionEnded(address indexed winner, uint256 amount);
+    event AuctionFinalized(address indexed winner, uint256 amount);
 
-    // Constructor
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Caller is not the auction owner");
+        _;
+    }
+    modifier auctionEnded() {
+        require(block.timestamp >= end, "Auction is still ongoing");
+        _;
+    }
+
     constructor(
         uint256 _royaltyPercentage,
         uint256 _start,
-        uint256 _end
+        uint256 _end,
+        address _nftAddress,
+        uint256 _tokenId // Add tokenId parameter
     ) {
         require(_start > block.timestamp, "Start time must be in the future.");
         require(_end > _start, "End time must be after start time.");
 
-        owner = msg.sender;
+        owner = payable(msg.sender);
         creator = payable(msg.sender);
         royaltyPercentage = _royaltyPercentage;
         start = _start;
         end = _end;
+        nft = IERC721(_nftAddress);
+        tokenId = _tokenId;
+    } 
+
+    // Transfer the NFT to the contract manually
+    function transferNFT() external onlyOwner {
+        nft.transferFrom(msg.sender, address(this), tokenId);
     }
 
-    // Place bid function
     function placeBid() external payable {
         require(!ended, "Auction has ended.");
         require(msg.sender != currentHighestBidder, "You are already the highest bidder.");
 
         if (currentHighestBid == 0) {
-            require(msg.value > 0, "Bid must be greater than 0.");
+            require(msg.value > 0.99 ether, "Bid must be greater than 0.99 ether.");
         } else {
             require(msg.value >= currentHighestBid * 110 / 100, "Bid amount must be at least 10% higher than the current highest bid.");
-        }
 
-        if (currentHighestBidder != address(0)) {
-            emit BidOutbid(currentHighestBidder, msg.value);
+    // Refund the previous highest bidder
+    payable(currentHighestBidder).transfer(currentHighestBid);
         }
-
         currentHighestBid = msg.value;
         currentHighestBidder = msg.sender;
 
         emit NewHighestBid(msg.sender, msg.value);
     }
 
-    // End auction function
-    function endAuction() external {
+    function endAuction() external onlyOwner {
         require(!ended, "Auction has already ended.");
-        require(msg.sender == owner, "Only the auction owner can end the auction.");
         require(block.timestamp >= end, "Auction has not ended yet.");
 
         ended = true;
-        creator.transfer(currentHighestBid * royaltyPercentage / 100);
-        payable(owner).transfer(currentHighestBid - (currentHighestBid * royaltyPercentage / 100));
 
         emit AuctionEnded(currentHighestBidder, currentHighestBid);
+
+        // Automatically finalize the auction if the owner doesn't do it manually
+        finalize();
     }
 
-    // Withdraw function
-    function withdraw() external {
-        require(ended, "Auction has not ended yet.");
-        require(msg.sender != currentHighestBidder, "Highest bidder cannot withdraw their bid.");
-        require(bids[msg.sender] > 0, "No bids to withdraw.");
+    function finalize() public {
+    require(!_hasFinalized, "Auction has already been finalized.");
+    require(ended, "Auction has not ended yet.");
 
-        uint256 amount = bids[msg.sender];
-        bids[msg.sender] = 0;
-        payable(msg.sender).transfer(amount);
-    }
+    // Calculate the royalty amount
+    uint256 royaltyAmount = (currentHighestBid * royaltyPercentage) / 100;
+    uint256 remainingTotal = currentHighestBid - royaltyAmount;
 
-    // Fallback function
-    fallback() external payable {
-        revert("This contract does not accept payments without a function call.");
-    }
+    // Set hasFinalized to true
+    _hasFinalized = true;
+
+    // Transfer the NFT to the winner
+    nft.transferFrom(address(this), currentHighestBidder, tokenId);
+
+    // Send the royalty amount to the creator
+    creator.transfer(royaltyAmount);
+
+    // Send remaining funds to owner
+    owner.transfer(remainingTotal);
+
+    emit AuctionFinalized(currentHighestBidder, currentHighestBid);}
 }
