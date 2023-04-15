@@ -3,51 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auction</title>
+    <title>NFT Auction</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-        }
-        .container {
-            max-width: 800px;
-            margin: auto;
-            text-align: center;
-        }
-        img {
-            max-width: 100%;
-        }
-        input[type="number"] {
-            width: 200px;
-            height: 40px;
-            text-align: center;
-            font-size: 16px;
-        }
-        button {
-            height: 40px;
-            background-color: red;
-            color: white;
-            font-size: 16px;
-            border: none;
-            cursor: pointer;
-        }
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+#app {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#nft-container {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+#nft-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+}
+
+#bid-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#bid-amount {
+    flex-grow: 1;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    border: 1px solid #ccc;
+    margin-right: 1rem;
+}
+
+#place-bid {
+    background-color: #007bff;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    border: none;
+    cursor: pointer;
+}
+
+#place-bid:hover {
+    background-color: #0056b3;
+}
+
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Current highest bid: <span id="highestBid">0</span> ETH</h1>
-         // Replaced MFT IMAGE URL with URL of NFT in Auction
-        <img src="https://avastars.io/media/26487" alt="NFT">
-        <p>Enter your bid (in ETH):</p>
-        <input type="number" min="0" step="0.001" id="bidAmount" />
-        <button id="submitBid">Bid</button>
+    <div id="app">
+        <div id="nft-container">
+            <img id="nft-image" src="https://avastars.io/media/26487" alt="NFT" />
+        </div>
+        <div id="bid-container">
+            <input type="number" id="bid-amount" placeholder="Enter bid amount in Ether" />
+            <button id="place-bid">Place Bid</button>
+        </div>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.6.1/web3.min.js"></script>
-    <script>
-        // Replace the following values with your own
-        const CONTRACT_ADDRESS = 'YOUR_CONTRACT_ADDRESS';
-        const ABI = [YOUR_CONTRACT_ABI];
 
-        // Your code to interact with the smart contract goes here
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.6.1/dist/web3.min.js"></script>
+    <script>
+        if (typeof window.ethereum === 'undefined') {
+            alert('MetaMask is not installed!');
+        }
+
+        async function connectWallet() {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            return accounts[0]; // The connected wallet address
+        }
+
+        const CONTRACT_ADDRESS = '0x5FD6eB55D12E759a21C09eF703fe0CBa1DC9d88D';
+        const ABI = [...] // Replace with your contract ABI JSON
+
+        const web3 = new Web3(window.ethereum);
+        const contract = new web3.eth.Contract(ABI, CONTRACT_ADDRESS);
+
+        async function placeBid(walletAddress, bidAmountInEther) {
+            const bidAmountInWei = web3.utils.toWei(bidAmountInEther, 'ether');
+            await contract.methods.placeBid().send({ from: walletAddress, value: bidAmountInWei });
+        }
+
+        document.getElementById('place-bid').addEventListener('click', async () => {
+            const walletAddress = await connectWallet();
+            const bidAmount = document.getElementById('bid-amount').value;
+            await placeBid(walletAddress, bidAmount);
+        });
     </script>
 </body>
 </html>
