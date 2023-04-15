@@ -18,13 +18,14 @@ contract FixedImageERC721 is ERC721URIStorage, Ownable {
         return _baseTokenURI;
     }
 
-    function mint(address to) public onlyOwner {
-        uint256 newTokenId = _tokenCounter;
-        _safeMint(to, newTokenId);
-        _setTokenURI(newTokenId, "");
+    function mint() public onlyOwner {
+        uint256 newItemId = _tokenCounter;
+        _safeMint(msg.sender, newItemId);
+        _setTokenURI(newItemId, ""); // The base token URI is already set, so we pass an empty string here
         _tokenCounter = _tokenCounter + 1;
     }
 }
 
-BaseImageURI for first Test contract: "https://raw.githubusercontent.com/Tylerlingg/Single-NFT-Auction/main/images/26487FHF.png"
+https://raw.githubusercontent.com/Tylerlingg/Tylerlingg.github.io/main/images/26487FHF.png
+
 
