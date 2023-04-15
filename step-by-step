@@ -1,0 +1,9 @@
+1. Deploy English Auction w NFT Smart Contract 
+  *As the Owner of the Auction Contract as well as the Owner of the NFT, you will need to Approve 
+  the access for the Auction Contract to transfer the NFT being sold to the winning bidder at the 
+  end of the auction.
+
+2. Under ERC721 Contract of the NFT that you are selling, you will need to 'Write Contract' 
+and 'Approve' the token ID after the Auction contract is deployed. 
+
+The contract creator needed to Transfer the NFT as well as end the auction. This will initiate the transfere of funds. 
