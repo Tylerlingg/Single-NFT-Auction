@@ -25,6 +25,10 @@ contract EnglishAuction {
         require(msg.sender == owner, "Caller is not the auction owner");
         _;
     }
+        modifier auctionEnded() {
+        require(block.timestamp >= end, "Auction is still ongoing");
+        _;
+    }
 
     constructor(
         uint256 _royaltyPercentage,
