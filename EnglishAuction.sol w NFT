@@ -44,8 +44,10 @@ contract EnglishAuction {
         nft = IERC721(_nftAddress);
         tokenId = _tokenId;
 
-        // Transfer the NFT to the contract upon deployment
-        nft.transferFrom(msg.sender, address(this), tokenId);
+        // Transfer the NFT to the contract manually
+        function transferNFT() external onlyOwner {
+            nft.transferFrom(msg.sender, address(this), tokenId);
+
     }
 
     function placeBid() external payable {
