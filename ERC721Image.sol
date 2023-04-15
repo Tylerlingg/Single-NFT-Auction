@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.3.0/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.3.0/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract FixedImageERC721 is ERC721URIStorage, Ownable {
     uint256 private _tokenCounter;
     string private _baseTokenURI;
 
-    constructor(string memory name, string memory symbol, string memory baseTokenURI) ERC721(name, symbol) {
+    constructor(
+        string memory name,
+        string memory symbol,
+        string memory baseTokenURI
+    ) ERC721(name, symbol) {
         _tokenCounter = 0;
         _baseTokenURI = baseTokenURI;
     }
@@ -25,7 +29,3 @@ contract FixedImageERC721 is ERC721URIStorage, Ownable {
         _tokenCounter = _tokenCounter + 1;
     }
 }
-
-https://raw.githubusercontent.com/Tylerlingg/Tylerlingg.github.io/main/images/26487FHF.png
-
-
