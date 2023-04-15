@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.3.0/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.3.0/contracts/access/Ownable.sol";
 
 contract FixedImageERC721 is ERC721URIStorage, Ownable {
     uint256 private _tokenCounter;
@@ -25,8 +25,6 @@ contract FixedImageERC721 is ERC721URIStorage, Ownable {
         _tokenCounter = _tokenCounter + 1;
     }
 }
-const FixedImageERC721 = artifacts.require("FixedImageERC721");
 
-module.exports = function (deployer) {
-  deployer.deploy(FixedImageERC721, "FixedImageToken", "FIT", "https://raw.githubusercontent.com/YourUsername/YourRepoName/branchName/path/to/image.jpg");
-};
+BaseImageURI for first Test contract: "https://raw.githubusercontent.com/Tylerlingg/Single-NFT-Auction/main/images/26487FHF.png"
+
