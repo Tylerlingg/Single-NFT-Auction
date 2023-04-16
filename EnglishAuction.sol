@@ -74,23 +74,31 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
     }
 
     function placeBid() external payable nonReentrant onlyBefore(end) onlyNotOwner {
-        if (msg.value <= currentHighestBid) {
-            revert("Bid too low.");
-        }
+    require(msg.sender != address(0), "Bidder address must not be the zero address");
+    require(msg.value > currentHighestBid, "Bid too low.");
 
-        require(msg.sender != address(0), "Bidder address must not be the zero address");
-
-        if (currentHighestBid != 0) {
-            payable(currentHighestBidder).transfer(currentHighestBid);
-        }
-
-        currentHighestBid = msg.value;
-        currentHighestBidder = msg.sender;
-
-        emit NewHighestBid(msg.sender, msg.value);
+    uint256 refundAmount = 0;
+    if (currentHighestBid != 0) {
+        refundAmount = currentHighestBid;
+        payable(currentHighestBidder).transfer(refundAmount);
     }
 
-    function endAuction() external onlyOwner {
+    currentHighestBid = msg.value;
+    currentHighestBidder = msg.sender;
+
+    emit NewHighestBid(msg.sender, msg.value);
+
+    // Refund any excess amount to the bidder
+    if (refundAmount > 0) {
+        uint256 excessAmount = msg.value - refundAmount;
+        if (excessAmount > 0) {
+            payable(currentHighestBidder).transfer(excessAmount);
+        }
+    }
+}
+
+
+    function endAuction() external onlyOwner() {
         require(!ended, "Auction has already ended.");
         require(block.timestamp >= end, "Auction has not ended yet.");
 
@@ -108,7 +116,17 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
     public pure override returns (bytes4) {
         return this.onERC721Received.selector;
     }
+    function getCurrentHighestBid() public view returns (uint256) {
+    return currentHighestBid;
+    }
 
+    function getCurrentHighestBidder() public view returns (address) {
+    return currentHighestBidder;
+    }
+
+    function getAuctionEndTime() public view returns (uint256) {
+    return end;
+    }
 
     function finalize() public onlyOwner nonReentrant auctionEnded {
         require(!_hasFinalized, "Auction has already been finalized.");
