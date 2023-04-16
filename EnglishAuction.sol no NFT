@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "node_modules/@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "https://raw.githubusercontent.com/Tylerlingg/Single-NFT-Auction/main/images/ERC721Holder.sol";
 
-contract EnglishAuction {
+contract EnglishAuction is SafeERC721 {
     address payable public immutable owner;
     address payable public immutable creator;
     uint256 public immutable royaltyPercentage;
@@ -20,6 +21,12 @@ contract EnglishAuction {
     event BidOutbid(address indexed outbidBidder, uint256 newHighestBid);
     event AuctionEnded(address indexed winner, uint256 amount);
     event AuctionFinalized(address indexed winner, uint256 amount);
+    event NFTTransferred(address indexed from, address indexed to, uint256 indexed tokenId);
+    
+    modifier onlyNotTransferred() {
+        require(nft.ownerOf(tokenId) != address(this), "NFT already transferred");
+        _;
+    }
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Caller is not the auction owner");
@@ -39,39 +46,79 @@ contract EnglishAuction {
     ) {
         require(_start > block.timestamp, "Start time must be in the future.");
         require(_end > _start, "End time must be after start time.");
+        require(royaltyPercentage == 10, "Royalty percentage will be 10% of the highest bid"); 
 
         owner = payable(msg.sender);
         creator = payable(msg.sender);
+
         royaltyPercentage = _royaltyPercentage;
         start = _start;
         end = _end;
         nft = IERC721(_nftAddress);
         tokenId = _tokenId;
-    } 
-
-    // Transfer the NFT to the contract manually
-    function transferNFT() external onlyOwner {
-        nft.transferFrom(msg.sender, address(this), tokenId);
     }
 
-    function placeBid() external payable {
-        require(!ended, "Auction has ended.");
-        require(msg.sender != currentHighestBidder, "You are already the highest bidder.");
+    // Transfer the NFT to the contract manually
+    function transferNFT() external onlyOwner onlyNotTransferred {
+        // Get the current owner of the NFT
+        address from = nft.ownerOf(tokenId);
+        // Transfer the NFT to the contract
+        nft.transferFrom(from, address(this), tokenId);
+        // Emit an event
+        emit NFTTransferred(from, address(this), tokenId);
+    }
+        // Define a modifier that checks that the NFT has not been transferred to the contract already
+    modifier onlyNotTransferred() {
+        require(
+            nft.ownerOf(tokenId) != address(this),
+            "NFT already transferred"
+        );
+        _;
+    }
+    // Define an event that notifies of the NFT transfer
+    event NFTTransferred(
+        address indexed from,
+        address indexed to,
+        uint256 indexed tokenId
+    );
 
-        if (currentHighestBid == 0) {
-            require(msg.value > 0.99 ether, "Bid must be greater than 0.99 ether.");
-        } else {
-            require(msg.value >= currentHighestBid * 110 / 100, "Bid amount must be at least 10% higher than the current highest bid.");
+    modifier onlyBefore(uint _time) {
+        require(
+            block.timestamp < _time,
+            "Operation not allowed after the specified time"
+        );
+        _;
+    }
 
-    // Refund the previous highest bidder
-    payable(currentHighestBidder).transfer(currentHighestBid);
+    modifier onlyNotOwner() {
+        require(
+            msg.sender != owner,
+            "Operation not allowed for the contract owner"
+        );
+        _;
+    }
+
+    function placeBid() external payable onlyBefore(end) onlyNotOwner {
+        // Check that the bid is higher than the current highest bid
+        if (msg.value <= currentHighestBid) {
+            revert("Bid too low");
         }
+        
+         // Ensure the bidder's address isn't the zero address
+        require(msg.sender != address(0), "Bidder address must not be the zero address");
+        
+        // Refund the previous highest bidder 
+        if (currentHighestBid != 0) {
+            payable(currentHighestBidder).transfer(currentHighestBid);
+        }
+        
+        // Update the highest bid and bidder variables
         currentHighestBid = msg.value;
         currentHighestBidder = msg.sender;
 
+        // Emit an event to notify the participants and observers of the new highest bid
         emit NewHighestBid(msg.sender, msg.value);
     }
-
     function endAuction() external onlyOwner {
         require(!ended, "Auction has already ended.");
         require(block.timestamp >= end, "Auction has not ended yet.");
@@ -79,30 +126,32 @@ contract EnglishAuction {
         ended = true;
 
         emit AuctionEnded(currentHighestBidder, currentHighestBid);
-
-        // Automatically finalize the auction if the owner doesn't do it manually
-        finalize();
     }
 
-    function finalize() public {
-    require(!_hasFinalized, "Auction has already been finalized.");
-    require(ended, "Auction has not ended yet.");
+    }
 
-    // Calculate the royalty amount
-    uint256 royaltyAmount = (currentHighestBid * royaltyPercentage) / 100;
-    uint256 remainingTotal = currentHighestBid - royaltyAmount;
+    function finalize() public onlyOwner auctionEnded {
+        require(!_hasFinalized, "Auction has already been finalized.");
+        require(ended, "Auction has not ended yet.");
 
-    // Set hasFinalized to true
-    _hasFinalized = true;
+        // Calculate the royalty amount
+        uint256 royaltyAmount = (currentHighestBid * royaltyPercentage) / 100;
 
-    // Transfer the NFT to the winner
-    nft.transferFrom(address(this), currentHighestBidder, tokenId);
+        // Send the royalty amount to the creator
+        creator.transfer(royaltyAmount);
 
-    // Send the royalty amount to the creator
-    creator.transfer(royaltyAmount);
+        // Calculate the remaining total
+        uint256 remainingTotal = currentHighestBid - royaltyAmount;
 
-    // Send remaining funds to owner
-    owner.transfer(remainingTotal);
+        // Send remaining funds to owner
+        owner.transfer(remainingTotal);
 
-    emit AuctionFinalized(currentHighestBidder, currentHighestBid);}
-}
+        // Transfer the NFT to the winner
+        safeTransferFrom(nft, address(this), currentHighestBidder, tokenId);
+
+        // Set hasFinalized to true
+        _hasFinalized = true;
+
+        emit AuctionFinalized(currentHighestBidder, currentHighestBid);
+    }
+    
