@@ -1,0 +1,241 @@
+Test
+
+ERC721 Contract: 0x49D237AA250BdE50cE71cc2b006d0001Fc39B985
+Owner: 0x22035d938b3fe388586F362c3BCF5471383A2AC9
+
+Token #: 0
+Token Holder: 0x22035d938b3fe388586F362c3BCF5471383A2AC9
+
+Auction Contract: 0xA735106e25b3ECB0eF6b588034CB3f0Ade588430
+
+BASETOKENURI: https://raw.githubusercontent.com/Tylerlingg/Tylerlingg.github.io/main/images/26487FHF.png
+
+
+Minted NFT
+Owner: 0x22035d938b3fe388586F362c3BCF5471383A2AC9
+NFT Contract: 0x49D237AA250BdE50cE71cc2b006d0001Fc39B985
+Hash: 0x5ddb6e10959bb0c7cc69543e6098da3f4e099a9c1acc6f8cf8bf270b40c671e5
+
+Deploy Auction Contract with token owner wallet
+Deployer: 0x22035d938b3fe388586F362c3BCF5471383A2AC9
+Auction contract:  0x9b6aa49f64387795fdbe6c0dcff8ea00392fd44b
+Hash: 0x47ea0867deeb1c7cac331af3d79d266732696f4142ce6ad1768e3369001d3004
+
+Approve NFT
+From: 0x22035d938b3fe388586F362c3BCF5471383A2AC9
+To: 0x9b6aa49f64387795fdbe6c0dcff8ea00392fd44b
+TokenID: 1
+Hash: 0xe0bfab96b54db8c47f3416669c65245a7569d20932b2c3b1229aca7fb7d6ecda
+
+Transfer NFT:
+From: 0x22035d938b3fe388586F362c3BCF5471383A2AC9
+To: 0x9b6aa49f64387795fdbe6c0dcff8ea00392fd44b
+Hash: 0x8bfb6c0799d6589636fc9a157079cd1670ab4651a621d01184188107dd178241
+
+**We shouldnt have to transfer the NFT, but it doesnt seem like the contract is pulling it from the wllet and transferring it via Finalize in the contract**
+
+Upload Auction address to index.html file 
+Ulpoad the Auction contract ABI if it has changed
+*ABI only changes on compilation, not deployment 
+
+Switch wallet address's, go to website, attempt bid of .0001eth 
+Bidder address: 0x54B0743D4Edb8C9233887A97902992b220CEfBaD
+	*The bid came back as failed on the site, but went through. Once txn went through for .0001 and the other for .001. 
+	*Should've reverted back, not letting the person make a bid since they were the highest bidder 
+Hash 1: 0x7aa369b229cf2b5d7cf02ae14e3a62b5a21d74b992c8444ecaae1f69c2993267
+Hash 2: 0x47ea0867deeb1c7cac331af3d79d266732696f4142ce6ad1768e3369001d3004
+
+Switched wallet to make a bid with a different wallet 
+Biddeer address: 0x8bbf1067d97e0601a649f940da899b67fef1d36e
+Hash: 0x30aa681693fcf863aab3af4eab3baa7983da9d5eeb2f2d7aacd0a694a275726e
+	*This txn did not bounce back with any error, so it seems like a small bug affected the first one, or the network was just laggy. 
+
+Auction Ended. 
+
+Attempted 'endAuction', came back with error "acution has already ended"
+
+Attempted finalize, but it is stating auction has not ended yet
+
+end coming back as false
+
+Set end time: 1681762874 (5 min ago)
+Current time: 1681762991
+
+
+**END TEST**
+
+Chat GPT Adjustments:
+
+he issues you mentioned are caused by a couple of mistakes in the contract code:
+
+The NFT is not being transferred to the auction contract when it is deployed. This means that the auction contract does not have the NFT, and thus cannot transfer it to the highest bidder at the end of the auction.
+
+The finalize() function is checking whether the auction has ended using the auctionEnded modifier, which requires that the block timestamp is greater than or equal to the end. However, in the endAuction() function, you are setting ended to true before emitting the AuctionEnded event. Therefore, when you call finalize(), it is incorrectly checking that the auction has not ended yet.
+
+To fix these issues, you can make the following changes:
+
+Transfer the NFT to the auction contract in the constructor:
+solidity
+Copy code
+constructor (
+    uint256 _royaltyPercentage,
+    uint256 _start,
+    uint256 _end,
+    address _nftAddress,
+    uint256 _tokenId
+) {
+    // ...
+    nft = IERC721(_nftAddress);
+    tokenId = _tokenId;
+    nft.safeTransferFrom(msg.sender, address(this), _tokenId); // Add this line
+}
+Remove the auctionEnded modifier from the finalize() function and update the require statement to check if the auction has ended:
+solidity
+Copy code
+function finalize() public onlyOwner nonReentrant {
+    require(ended, "Auction has not ended yet."); // Change this line
+    // ...
+}
+After making these changes, your contract should function as expected. The NFT will be transferred to the auction contract when it is deployed, and the finalize() function will correctly check if the auction has ended before finalizing it.
+
+New Auction Contract: 
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
+
+contract EnglishAuction is ERC721Holder, ReentrancyGuard {
+    address payable public immutable owner;
+    address payable public immutable creator;
+    uint256 public immutable royaltyPercentage;
+    uint256 public immutable start;
+    uint256 public immutable end;
+    uint256 public currentHighestBid;
+    address public currentHighestBidder;
+    bool public ended;
+    IERC721 public nft;
+    uint256 public tokenId;
+    bool private _hasFinalized;
+
+    mapping(address => uint256) public escrow;
+
+    event NewHighestBid(address indexed bidder, uint256 amount);
+    event AuctionEnded(address indexed winner, uint256 amount);
+    event AuctionFinalized(address indexed winner, uint256 amount);
+    event NFTTransferred(address indexed from, address indexed to, uint256 indexed tokenId);
+
+    constructor (
+        uint256 _royaltyPercentage,
+        uint256 _start,
+        uint256 _end,
+        address _nftAddress,
+        uint256 _tokenId
+    ) {
+        require(_start > block.timestamp, "Start time must be in the future.");
+        require(_end > _start, "End time must be after start time.");
+
+        owner = payable(msg.sender);
+        creator = payable(msg.sender);
+
+        royaltyPercentage = _royaltyPercentage;
+        start = _start;
+        end = _end;
+        nft = IERC721(_nftAddress);
+        tokenId = _tokenId;
+         nft.safeTransferFrom(msg.sender, address(this), _tokenId);
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Caller is not the auction owner");
+        _;
+    }
+    
+    modifier auctionEnded() {
+        require(block.timestamp >= end, "Auction is still ongoing");
+        _;
+    }
+
+    modifier onlyBefore(uint _time) {
+        require(block.timestamp < _time, "Operation not allowed after the specified time");
+        _;
+    }
+
+    modifier onlyNotOwner() {
+        require(msg.sender != owner, "Operation not allowed for the contract owner");
+        _;
+    }
+
+    function placeBid() external payable nonReentrant onlyNotOwner {
+        _checkAuctionStatus();
+        require(msg.sender != address(0), "Bidder address must not be the zero address");
+        
+        require(!ended, "Auction has ended.");
+        require(msg.value + escrow[msg.sender] > currentHighestBid, "Bid too low.");
+
+        if (currentHighestBid != 0) {
+            escrow[currentHighestBidder] += currentHighestBid;
+        }
+
+        // Deduct the new highest bid from the bidder's escrow balance
+        escrow[msg.sender] = escrow[msg.sender] + msg.value - currentHighestBid;
+
+        currentHighestBid = escrow[msg.sender];
+        currentHighestBidder = msg.sender;
+
+        emit NewHighestBid(msg.sender, escrow[msg.sender]);
+}
+
+    function _checkAuctionStatus() internal {
+        if (block.timestamp >= end && !ended) {
+            ended = true;
+            emit AuctionEnded(currentHighestBidder, currentHighestBid);
+        }
+    }
+
+    function withdraw() external nonReentrant {
+        require(ended, "Auction has not ended yet.");
+        uint256 amount = escrow[msg.sender];
+        require(amount > 0, "No funds to withdraw");
+
+        escrow[msg.sender] = 0;
+        payable(msg.sender).transfer(amount);
+    }
+
+    function endAuction() external onlyOwner {
+        _checkAuctionStatus();
+        require(!ended, "Auction has already ended.");
+        require(block.timestamp >= end, "Auction has not ended yet.");
+
+        ended = true;
+
+        emit AuctionEnded(currentHighestBidder, currentHighestBid);
+    }
+
+    function finalize() public onlyOwner nonReentrant {
+        require(!_hasFinalized, "Auction has already been finalized.");
+        require(ended, "Auction has not ended yet.");
+
+        // Calculate the royalty amount
+        uint256 royaltyAmount = (currentHighestBid * royaltyPercentage) / 100;
+
+        // Send the royalty amount to the creator
+        creator.transfer(royaltyAmount);
+
+        // Calculate the remaining total
+        uint256 remainingTotal = currentHighestBid - royaltyAmount;
+
+        // Send remaining funds to owner
+        owner.transfer(remainingTotal);
+
+        // Transfer the NFT to the winner
+        nft.safeTransferFrom(address(this), currentHighestBidder, tokenId);
+
+        // Set hasFinalized to true
+        _hasFinalized = true;
+
+        emit AuctionFinalized(currentHighestBidder, currentHighestBid);
+    }
+}
