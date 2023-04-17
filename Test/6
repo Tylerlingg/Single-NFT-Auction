@@ -1,0 +1,34 @@
+Test 6 - Using Auction Contract from 4/16/23
+
+Deploy ERC721: 0x07c090b295be5e5115aa9aafbbd7c923da458ccb63a783618085220373531e4d
+Deployer: 0x8BBf1067d97e0601A649f940dA899b67FeF1d36E
+
+Mint Token: 0
+Holder: 0x8BBf1067d97e0601A649f940dA899b67FeF1d36E
+Hash: 0x757ee83d5d8c1439b33e87e2018223c6020f03cd513047b39d1b738334e4a7b9
+
+Compile Auction Contract
+
+Deploy Auction Contract: 0xb06bfB2E70281ecBAd8b405fD6aA2f9494A19927
+Deployer: 0x8bbf1067d97e0601a649f940da899b67fef1d36e
+Hash: 0xe2bf812bf9d578e712dbad4897e836b6b564fca09ee5524b50a535067c356f81
+
+Approve to: 0xb06bfB2E70281ecBAd8b405fD6aA2f9494A19927
+Hash: 0x337f90c3cfe45023f53394a230cfbd8706dda050ff2c21fabac3508f733e5c13
+
+Place Bid
+Hash: 0x1a2d8e0ce086587f2f52173b44026cbd238c8927f919b0d108707ed11f09f5ee
+
+TransferNFT
+Hash: 0xb245db4a2aea36a0ac9b167fa1370a7edff733859a2d5afdb76263637173fd96
+
+Call endAuction function
+Hash: 0x7c6769face32bc58c0e346da2f44a98b55b370fa39a0d62d5205a9f87e23ea3e
+
+Call finalize function: 
+Hash: 0xc84685d061100538fe3b7f02feb42b6bd2135b7a57cfdbbf865fac8ca1b8c381
+	NFT Transferred correctly
+	0.025 ETH Transferred to creator
+	0.225 ETH Transferred to Auctioneer 
+
+**placeBid function was used via https://tylerlingg.github.io
