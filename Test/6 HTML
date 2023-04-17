@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>NFT Auction</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			background-color: #f5f5f5;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			height: 100vh;
+			margin: 0;
+		}
+
+		#app {
+			background-color: white;
+			padding: 2rem;
+			border-radius: 1rem;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+		}
+
+		#nft-container {
+			text-align: center;
+			margin-bottom: 2rem;
+		}
+
+		#nft-image {
+			max-width: 100%;
+			height: auto;
+			border-radius: 0.5rem;
+		}
+
+		#bid-container {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+
+		#bid-amount {
+			flex-grow: 1;
+			padding: 0.5rem;
+			border-radius: 0.25rem;
+			border: 1px solid #ccc;
+			margin-right: 1rem;
+		}
+
+		#place-bid {
+			background-color: #007bff;
+			color: white;
+			padding: 0.5rem 1rem;
+			border-radius: 0.25rem;
+			border: none;
+			cursor: pointer;
+		}
+
+		#place-bid:hover {
+			background-color: #b30300;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="app">
+		<div id="nft-container">
+			<img id="nft-image" src="images/Doc1.jpg" alt="NFT" />
+		</div>
+		<div id="bid-container">
+			<input type="number" id="bid-amount" placeholder="Enter bid amount in Ether" />
+			<button id="place-bid">Place Bid</button>
+		</div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+	<script>
+		if (typeof window.ethereum === 'undefined') {
+			alert('MetaMask is not installed!');
+		}
+
+		async function connectWallet() {
+			const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+			return accounts[0]; // The connected wallet address
+		}
+
+		const CONTRACT_ADDRESS = '0xb06bfB2E70281ecBAd8b405fD6aA2f9494A19927';
+		const ABI = [] // Replace with your contract ABI JSON
+
+		const SEPOLIA_RPC_URL = 'https://sepolia.infura.io/v3/c970aa070ed149938f8c257ad46cb4f4'; // Replace with your Sepolia RPC URL
+		const web3 = new Web3(window.ethereum);
+		const contract = new web3.eth.Contract(ABI, CONTRACT_ADDRESS);
+		async function placeBid(walletAddress, bidAmountInEther) {
+			const bidAmountInWei = web3.utils.toWei(bidAmountInEther, 'ether');
+			const accounts = await web3.eth.getAccounts();
+			console.log(contract);
+			const currentHighestBidder = await contract.methods.currentHighestBidder().call();
+			const currentHighestBid = await contract.methods.currentHighestBid().call(); // Fetch currentHighestBid from the smart contract
+
+			if (bidAmountInWei <= currentHighestBid) {
+				alert('Bid too low.');
+				return;
+			}
+			try {
+				await contract.methods.placeBid().send({ from: walletAddress, value: bidAmountInWei });
+				alert('Bid placed successfully!');
+			} catch (error) {
+				alert('Error placing bid: ' + error.message);
+			}
+		}
+
+		document.getElementById('place-bid').addEventListener('click', async () => {
+			try {
+				const walletAddress = await connectWallet();
+				const bidAmountInEther = document.getElementById('bid-amount').value;
+
+				if (bidAmountInEther === '' || parseFloat(bidAmountInEther) <= 0) {
+					alert('Please enter a valid bid amount.');
+					return;
+				}
+
+				await placeBid(walletAddress, bidAmountInEther);
+			} catch (error) {
+				console.error(error);
+				alert('Error placing bid: ' + error.message);
+			}
+		});
+
+	</script>
+</body>
+
+</html>
