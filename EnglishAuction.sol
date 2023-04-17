@@ -87,7 +87,8 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
     currentHighestBidder = msg.sender;
 
     emit NewHighestBid(msg.sender, msg.value);
-
+    emit BidOutbid(currentHighestBidder, msg.value);
+   
     // Refund any excess amount to the bidder
     if (refundAmount > 0) {
         uint256 excessAmount = msg.value - refundAmount;
@@ -96,8 +97,6 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         }
     }
 }
-
-
     function endAuction() external onlyOwner() {
         require(!ended, "Auction has already ended.");
         require(block.timestamp >= end, "Auction has not ended yet.");
