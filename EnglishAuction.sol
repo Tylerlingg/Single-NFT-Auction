@@ -29,13 +29,14 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         uint256 _start,
         uint256 _end,
         address _nftAddress,
-        uint256 _tokenId
+        uint256 _tokenId,
+        address payable _creator
     ) {
         require(_start > block.timestamp, "Start time must be in the future.");
         require(_end > _start, "End time must be after start time.");
 
         owner = payable(msg.sender);
-        creator = payable(msg.sender);
+        creator = _creator; // Set the creator address to the provided address
 
         royaltyPercentage = _royaltyPercentage;
         start = _start;
@@ -43,6 +44,7 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         nft = IERC721(_nftAddress);
         tokenId = _tokenId;
     }
+    
       modifier onlyNotTransferred() {
         require(nft.ownerOf(tokenId) != address(this), "NFT already transferred");
         _;
