@@ -15,7 +15,7 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
     address public currentHighestBidder;
     bool public ended;
     IERC721 public nft;
-    uint256 public tokenId;
+    uint256[] public tokenIds;
     bool private _hasFinalized;
 
     mapping(address => uint256) public escrow;
@@ -30,7 +30,7 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         uint256 _start,
         uint256 _end,
         address _nftAddress,
-        uint256 _tokenId
+        uint256[] memory _tokenIds
     ) {
         require(_start > block.timestamp, "Start time must be in the future.");
         require(_end > _start, "End time must be after start time.");
@@ -42,7 +42,7 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         start = _start;
         end = _end;
         nft = IERC721(_nftAddress);
-        tokenId = _tokenId;
+        tokenIds = _tokenIds;
     }
 
     modifier onlyOwner() {
@@ -99,7 +99,7 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         emit AuctionEnded(currentHighestBidder, currentHighestBid);
     }
 
-    function finalize() public onlyOwner nonReentrant auctionEnded {
+        function finalize() public onlyOwner nonReentrant auctionEnded {
         require(!_hasFinalized, "Auction has already been finalized.");
         require(ended, "Auction has not ended yet.");
 
@@ -115,8 +115,10 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         // Send remaining funds to owner
         owner.transfer(remainingTotal);
 
-        // Transfer the NFT to the winner
-        nft.safeTransferFrom(address(this), currentHighestBidder, tokenId);
+        // Transfer each NFT to the winner
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            nft.safeTransferFrom(address(this), currentHighestBidder, tokenIds[i]);
+        }
 
         // Set hasFinalized to true
         _hasFinalized = true;
