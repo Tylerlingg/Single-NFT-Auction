@@ -1,0 +1,76 @@
+Test 9: Reusable Contract #1
+
+Deploy ERC721: 0xf1938bc66d8b4ced5860ecc83ea07885c2123f5d
+Hash: 0x342fce03d5011fd68529808d205df5d0376b3098af7fe5662a10df98a88549df
+
+Mint Token: 0
+Owner: 0x54B0743D4Edb8C9233887A97902992b220CEfBaD
+
+Deploy Auction Contract: 0xe502e17e50bfd1bceec01112836faa016f5d6391
+Deployer: 0x54b0743d4edb8c9233887a97902992b220cefbad
+Creator NFT: 0x8BBf1067d97e0601A649f940dA899b67FeF1d36E
+
+Approve: 0x081710c4329842da5fa74020e2dc92d360c3edd5cbf42719da5a728c30c7cc60
+
+safeTransferFrom: 0x12ec8d90a91073afc0ee4b59b469a895ebfd9684f444782f14456c1616bf5e2e
+
+Attempt bid at .0009
+	*Getting gas estimation error 
+
+Attempt bid at .001
+	*Getting gas estimation error, sent txn anyway. 
+	*TXN failed 
+	*Operation failed due to bid coming from contract owner
+
+Atempt bid at .0009
+	*It was successful. Need to check how the input is supposed to be formatted when entering before deploymet 
+Hash: 0x22035d938b3fe388586F362c3BCF5471383A2AC9
+
+Atttemp bid at .027
+	*Error, bid is to low 
+
+Attempt Bid at .2
+	*Error, bid is to low
+
+endAuction: 0x4cbf5823b4c90420967f8866669812cdaab64ae63203014b5ad1d784167ab741
+
+finalize: 0x43f699c4033b34788e80c00fbd49a9f8f206bb0c2c399bffbe613c5923a0246f
+	0x54B0743D4Edb8C9233887A97902992b220CEfBaD - 0.0006 eth
+	0x8BBf1067d97e0601A649f940dA899b67FeF1d36E - 0.0000009 eth
+	0x22035d938b3fe388586F362c3BCF5471383A2AC9 - (-)0.0009 eth
+	0x22035d938b3fe388586F362c3BCF5471383A2AC9 - received NFT
+
+Attempt withdrawExcessFunds to make sure the contract has been cleared
+	*"execution reverted: No remaining funds to withdraw."
+
+Mint another ERC721 Token: 1
+Hash: 0xb6a20b9f90409aaa8673c8118ab89a87af722ffb55f0bfcbb56a05ca509d9284
+
+Approve: 0xd5f0a073a84e48ac0730ec82977daed9998031d27b0ae896f7dff9a4aa062360
+
+resetAuction: 0x4da01e410c16cc74f210765dae2160683be614567c5d5ebd50e602be6f4bcaee
+	minimumBid used this time: 100000000000000 = 0.0001 Ether
+
+safeTransferFrom: 0xf0aac32c158557898a9ed4301d962c4d5356f0d820ce84a35bfa8e8d91796841
+
+Attemp bid: .00001
+	*Was receiving error before sending txn, sent anyway
+	*Error 'Bid too low'
+LFG - it worked
+Hash: 0x1da432a9a0e57ba7914a378ed2ef28edd6c3d66d2ba118ee2303c308d3603686
+
+Attempt Bid: .0001 (Parameter we set on deployment)
+SUCCESS
+Hash: 0xd798f4f293dd7606fbb7442291af5286cec749f90516649fb0585f080d224302
+
+Attemp Bid: .02
+SUCCESS
+Hash: 0xcb9ad5e004e596d1ea0a494409fa5e3f6d0219968eddf54f8481c02bbcf874d6
+
+End Auction: 0xc27ec944f10a32b7c8cd81ad6468359a6acf074a1c4a3c5c7bb5d82d5aaafc52
+
+Finalize: 0xe4ebe1e4f668caca8cada2489cb12cf099a9d1f069c30dc59280705cd69ebadb
+	highest bidder: 0x8BBf1067d97e0601A649f940dA899b67FeF1d36E -0.02eth
+	token sent and received: success
+	auction creator: 0x54B0743D4Edb8C9233887A97902992b220CEfBaD +0.01998eth
+	nft creator: 0.00002eth
