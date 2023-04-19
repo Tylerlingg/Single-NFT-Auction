@@ -1,0 +1,42 @@
+Adustments needing to be made: 
+
+emove the fundRecipient variable and use the fundRecipients mapping:
+
+Remove the following line from the contract:
+address payable public immutable fundRecipient;
+Remove the following line from the constructor:
+fundRecipient = _fundRecipients[0];
+Change the import statement for IERC20 to use IERC20Upgradeable:
+
+Replace the following line:
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+with:
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Upgradeable.sol";
+Then, replace IERC20 with IERC20Upgradeable in the using SafeERC20 for IERC20; line:
+using SafeERC20 for IERC20Upgradeable;
+Add the onlyBefore(_auctionId) modifier to the transferNFT function:
+
+Replace the following line:
+function transferNFT(uint256 _auctionId) external onlyOwner onlyNotTransferred(_auctionId) {
+with:
+function transferNFT(uint256 _auctionId) external onlyOwner onlyBefore(_auctionId) onlyNotTransferred(_auctionId) {
+Add the auctionEnded(_auctionId) modifier to the endAuction function:
+
+Replace the following line:
+function endAuction(uint256 _auctionId) external onlyOwner {
+with:
+function endAuction(uint256 _auctionId) external onlyOwner auctionEnded(_auctionId) {
+Add the view keyword to the getCurrentHighestBid, getCurrentHighestBidder, and getAuctionEndTime functions:
+
+Replace the following lines:
+java
+Copy code
+function getCurrentHighestBid(uint256 _auctionId) public returns (uint256) {
+function getCurrentHighestBidder(uint256 _auctionId) public returns (address) {
+function getAuctionEndTime(uint256 _auctionId) public returns (uint256) {
+with:
+java
+Copy code
+function getCurrentHighestBid(uint256 _auctionId) public view returns (uint256) {
+function getCurrentHighestBidder(uint256 _auctionId) public view returns (address) {
+function getAuctionEndTime(uint256 _auctionId) public view returns (uint256) {
