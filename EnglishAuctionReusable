@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 
 contract EnglishAuction is ERC721Holder, ReentrancyGuard {
+    using SafeMath for uint256;
     address payable public immutable owner;
     address payable public immutable creator;
     uint256 public immutable royaltyPercentage;
@@ -19,11 +21,14 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
     uint256 public tokenId;
     bool private _hasFinalized;
 
+    uint256 private constant PERCENTAGE_DIVISOR = 10000;
+
     event NewHighestBid(address indexed bidder, uint256 amount);
     event BidOutbid(address indexed outbidBidder, uint256 newHighestBid);
     event AuctionEnded(address indexed winner, uint256 amount);
     event AuctionFinalized(address indexed winner, uint256 amount);
     event NFTTransferred(address indexed from, address indexed to, uint256 indexed tokenId);
+    event AuctionReset(uint256 indexed tokenId, uint256 start, uint256 end, uint256 minimumBid);
 
     constructor (
         uint256 _royaltyPercentage,
@@ -38,8 +43,7 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         require(_end > _start, "End time must be after start time.");
 
         owner = payable(msg.sender);
-        creator = _creator; // Set the creator address to the provided address
-
+        creator = _creator;
         royaltyPercentage = _royaltyPercentage;
         start = _start;
         end = _end;
@@ -79,26 +83,27 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         _;
     }
 
-    function placeBid() external payable nonReentrant onlyBefore(end) onlyNotOwner {
+        function placeBid() external payable nonReentrant onlyBefore(end) onlyNotOwner {
         require(msg.sender != address(0), "Bidder address must not be the zero address");
         require(msg.value >= minimumBid, "Bid too low.");
         require(msg.value > currentHighestBid, "Bid too low.");
 
-        uint256
-                refundAmount = 0;
+        uint256 refundAmount = 0;
         if (currentHighestBid != 0) {
             refundAmount = currentHighestBid;
             payable(currentHighestBidder).transfer(refundAmount);
         }
 
+        emit BidOutbid(currentHighestBidder, msg.value);
+
         currentHighestBid = msg.value;
         currentHighestBidder = msg.sender;
 
         emit NewHighestBid(msg.sender, msg.value);
-        emit BidOutbid(currentHighestBidder, msg.value);
     }
 
-    function endAuction() external onlyOwner() {
+   function endAuction() external onlyOwner {
+        require(nft.ownerOf(tokenId) == address(this), "NFT not transferred to contract");
         require(!ended, "Auction has already ended.");
         require(block.timestamp >= end, "Auction has not ended yet.");
 
@@ -130,26 +135,29 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
     }
 
     function finalize() public onlyOwner nonReentrant auctionEnded {
+        require(nft.ownerOf(tokenId) == address(this), "Contract does not hold the NFT");
         require(!_hasFinalized, "Auction has already been finalized.");
         require(ended, "Auction has not ended yet.");
 
         // Calculate the royalty amount
-        uint256 royaltyAmount = (currentHighestBid * royaltyPercentage) / 100;
+        uint256 royaltyAmount = currentHighestBid.mul(royaltyPercentage).div(PERCENTAGE_DIVISOR);
 
         // Send the royalty amount to the creator
-        creator.transfer(royaltyAmount);
+        (bool successRoyalty, ) = creator.call{value: royaltyAmount}("");
+        require(successRoyalty, "Transfer to creator failed.");
 
         // Calculate the remaining total
         uint256 remainingTotal = currentHighestBid - royaltyAmount;
 
         // Send remaining funds to owner
-        owner.transfer(remainingTotal);
-
-        // Transfer the NFT to the winner
-        nft.safeTransferFrom(address(this), currentHighestBidder, tokenId);
+        (bool successOwner, ) = owner.call{value: remainingTotal}("");
+        require(successOwner, "Transfer to owner failed.");
 
         // Set hasFinalized to true
         _hasFinalized = true;
+
+        // Transfer the NFT to the winner
+        nft.safeTransferFrom(address(this), currentHighestBidder, tokenId);
 
         emit AuctionFinalized(currentHighestBidder, currentHighestBid);
     }
@@ -161,10 +169,12 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         owner.transfer(remainingBalance);
     }
 
-    function resetAuction(uint256 _start, uint256 _end, uint256 _minimumBid, uint256 _tokenId) external onlyOwner {
+        function resetAuction(uint256 _start, uint256 _end, uint256 _minimumBid, uint256 _tokenId) external onlyOwner {
         require(_hasFinalized, "Auction has not been finalized yet.");
         require(_start > block.timestamp, "Start time must be in the future.");
         require(_end > _start, "End time must be after start time.");
+
+        emit AuctionReset(_tokenId, _start, _end, _minimumBid);
 
         start = _start;
         end = _end;
@@ -176,4 +186,3 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         _hasFinalized = false;
     }
 }
-
