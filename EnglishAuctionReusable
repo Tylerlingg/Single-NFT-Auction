@@ -186,3 +186,4 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         _hasFinalized = false;
     }
 }
+
