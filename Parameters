@@ -1,0 +1,27 @@
+0.0001 Ether = 100000000000000
+0.001 Ether = 1000000000000000
+0.01 Ether = 10000000000000000
+0.1 Ether = 100000000000000000
+1 Ether = 1000000000000000000
+
+
+To deploy the EnglishAuction contract on Remix, you need to pass the required parameters for the constructor as follows:
+
+_royaltyPercentage: The percentage of the final bid that will be paid to the creator of the NFT as a royalty.
+_starts: An array of uint256 values representing the start times of each auction.
+_ends: An array of uint256 values representing the end times of each auction.
+_minimumBids: An array of uint256 values representing the minimum bid amount for each auction.
+_nftAddresses: An array of address values representing the addresses of the NFT contracts for each auction.
+_tokenIds: An array of uint256 values representing the token IDs for each auction.
+_creators: An array of address values representing the addresses of the NFT creators for each auction.
+_fundRecipients: An array of address values representing the addresses of the fund recipients for each auction.
+To enter these values in Remix, you can follow these steps:
+
+Navigate to the "Deploy & Run Transactions" tab on the left-hand side panel of the Remix IDE.
+Select the contract you want to deploy from the dropdown menu.
+In the "Constructor" section below the dropdown menu, enter the values for the constructor parameters separated by commas and enclosed in square brackets for the array parameters. For example:
+css
+Copy code
+10, [1631900400, 1632588000], [1632568800, 1633256400], [100000000000000000, 200000000000000000], ["0x1234567890123456789012345678901234567890", "0x1234567890123456789012345678901234567890"], [1, 2], ["0x1234567890123456789012345678901234567890", "0x1234567890123456789012345678901234567890"], ["0x1234567890123456789012345678901234567890", "0x1234567890123456789012345678901234567890"]
+Click on the "transact" button to deploy the contract with the specified parameters.
+Note that you will need to connect to a network (such as the JavaScript VM or a testnet) and have sufficient funds in your account to deploy the contract.
