@@ -51,9 +51,10 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
     }
 
     modifier onlyNotTransferred() {
-        require(nft.ownerOf(tokenId) != address(this), "NFT already transferred");
+        require(nft.ownerOf(tokenId) == address(this), "NFT already transferred");
         _;
     }
+
 
     function transferNFT() external onlyOwner onlyNotTransferred {
         address from = nft.ownerOf(tokenId);
@@ -77,33 +78,24 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
     }
 
     function placeBid() external payable nonReentrant onlyNotOwner {
-    require(msg.sender != address(0), "Bidder address must not be the zero address");
-    require(msg.value > currentHighestBid, "Bid must be higher than current highest bid.");
-    require(block.timestamp < end, "Auction has ended");
+        require(msg.sender != address(0), "Bidder address must not be the zero address");
+        require(msg.value >= minimumBid, "Bid must be greater than or equal to the minimum bid.");
+        require(msg.value > currentHighestBid, "Bid must be strictly higher than current highest bid.");
+        require(block.timestamp < end, "Auction has ended");
 
-    uint256 refundAmount = 0;
-    if (currentHighestBid != 0) {
-        refundAmount = currentHighestBid;
-        payable(currentHighestBidder).transfer(refundAmount);
+        uint256 refundAmount = 0;
+        if (currentHighestBid != 0) {
+            refundAmount = currentHighestBid;
+            payable(currentHighestBidder).transfer(refundAmount);
     }
 
-    emit BidOutbid(currentHighestBidder, msg.value);
+        emit BidOutbid(currentHighestBidder, msg.value);
 
-    currentHighestBid = msg.value;
-    currentHighestBidder = msg.sender;
+        currentHighestBid = msg.value;
+        currentHighestBidder = msg.sender;
 
-    emit NewHighestBid(msg.sender, msg.value);
+        emit NewHighestBid(msg.sender, msg.value);
 }
-
-   function endAuction() external onlyOwner {
-        require(nft.ownerOf(tokenId) == address(this), "NFT not transferred to contract");
-        require(!ended, "Auction has already ended.");
-        require(block.timestamp >= end, "Auction has not ended yet.");
-
-        ended = true;
-
-        emit AuctionEnded(currentHighestBidder, currentHighestBid);
-    }
 
     function onERC721Received(
         address,
@@ -115,22 +107,11 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         return this.onERC721Received.selector;
     }
 
-    function getCurrentHighestBid() public view returns (uint256) {
-        return currentHighestBid;
-    }
-
-    function getCurrentHighestBidder() public view returns (address) {
-        return currentHighestBidder;
-    }
-
-    function getAuctionEndTime() public view returns (uint256) {
-        return end;
-    }
-
     function finalize() public onlyOwner nonReentrant auctionEnded {
         require(nft.ownerOf(tokenId) == address(this), "Contract does not hold the NFT");
-        require(!_hasFinalized, "Auction has already been finalized.");
-        require(ended, "Auction has not ended yet.");
+        require(!ended, "Auction has already ended.");
+    
+        ended = true;
 
         // Calculate the royalty amount
         uint256 royaltyAmount = (currentHighestBid * royaltyPercentage) / PERCENTAGE_DIVISOR;
@@ -146,14 +127,13 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         (bool successOwner, ) = owner.call{value: remainingTotal}("");
         require(successOwner, "Transfer to owner failed.");
 
-        // Set hasFinalized to true
-        _hasFinalized = true;
-
         // Transfer the NFT to the winner
         nft.safeTransferFrom(address(this), currentHighestBidder, tokenId);
 
+        emit AuctionEnded(currentHighestBidder, currentHighestBid);
         emit AuctionFinalized(currentHighestBidder, currentHighestBid);
     }
+
 
     function withdrawExcessFunds() external onlyOwner {
         require(_hasFinalized, "Auction has not been finalized yet.");
@@ -162,8 +142,9 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         owner.transfer(remainingBalance);
     }
 
-        function resetAuction(uint256 _start, uint256 _end, uint256 _minimumBid, uint256 _tokenId) external onlyOwner {
+    function resetAuction(uint256 _start, uint256 _end, uint256 _minimumBid, uint256 _tokenId) external onlyOwner {
         require(_hasFinalized, "Auction has not been finalized yet.");
+        require(nft.ownerOf(_tokenId) == address(this), "NFT not transferred to contract");
         require(_start > block.timestamp, "Start time must be in the future.");
         require(_end > _start, "End time must be after start time.");
 
@@ -178,4 +159,5 @@ contract EnglishAuction is ERC721Holder, ReentrancyGuard {
         tokenId = _tokenId;
         _hasFinalized = false;
     }
+
 }
