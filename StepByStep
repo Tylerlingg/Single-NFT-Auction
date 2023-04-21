@@ -1,0 +1,38 @@
+Step by Step:
+
+To smoothly run this contract as the owner of the NFT being auctioned and the one deploying the auction contract, follow these steps:
+
+Deploy the EnglishAuction contract by providing the necessary constructor arguments:
+
+_royaltyPercentage: The percentage of the final bid amount to be sent to the creator as royalty.
+	ex: 10 = 10% of winning bid amount 
+_start: The auction start timestamp.
+	ex: 1682096873 (needs to be in Unix Timestamp)
+_end: The auction end timestamp.
+	ex: same as above
+_minimumBid: The minimum amount a user must bid.
+	0.0001 Ether = 100000000000000
+	0.001 Ether = 1000000000000000
+	0.01 Ether = 10000000000000000
+	0.1 Ether = 100000000000000000
+	1 Ether = 1000000000000000000
+_nftAddress: The address of the NFT contract.
+	ex: (insert NFT's address)
+_tokenId: The token ID of the NFT to be auctioned.
+	ex: tokenID
+_creator: The address of the NFT creator.
+	ex: NFT Creator 
+_beneficiary: The address that will receive the auction proceeds.
+	ex: beneficiary 
+	
+Approve the auction contract to manage the NFT by either calling approve or setApprovalForAll on the NFT contract.
+
+Call transferNFT to transfer the NFT from your address to the auction contract.
+
+Allow users to place their bids by calling the placeBid function.
+
+After the auction end time has passed, call endAuction to finalize the auction, transfer the NFT to the highest bidder, and distribute the funds to the creator and beneficiary.
+
+If necessary, you can call withdrawExcessFunds to withdraw any remaining balance left in the contract after the auction has been finalized.
+
+Optionally, you can reset the auction for a new token by calling resetAuction with the new start time, end time, minimum bid, and token ID.
